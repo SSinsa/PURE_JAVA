@@ -1,0 +1,215 @@
+[Chapter03. 람다 표현식]
+
+! 람드 표현식은 익명 클래스처럼 이름이 업는 함수면서 메서드를 인수로 전달할 수 있으므로 일단은 람다 표현식이 익명 클래스와 비슷한 것이라고 생각하자.
+
+3.1 람다란 무엇인가?
+
+! 람다표현식 : 메서드로 전달할 수 있는 익명 함수를 단수화한 것이라고 할 수 있다.
+
+> 특징 4가지
+- 익명
+- 함수 -> 람다는 메서드처럼 특정 클래스에 종속되지 않으므로 함수라고 부른다. 
+          하지만 메서드처럼 파라미터 리스트, 바디, 반환형식, 가능한 예외 리스트를 포함한다.
+- 전달
+- 간결성
+
+Comparator<Apple> byWeight = new Comparator<Apple>() {
+    public int compare(Apple aq, Apple a2) {
+        return a1.getWeight().compareTo(a2.getWeight());
+    }
+}
+
+==>
+
+Comparator<Apple> byWeight =
+    (Apple aq, Apple a2) -> a1.getWeight().compareTo(a2.getWeight());
+        람다 파라미터     ->                  람다 바디
+
+즉, (parameters) -> expression   이렇게도 사용가능  (parameters) -> { statements; }
+
+! 람다 사용법
+1. 불린 표현식   (List<String) list) -> list.isEmpty() 
+2. 객체생성     () -> new Apple(10)
+3. 객체에서 소비  (Apple a) -> {
+                    System.out.println(a.getWeight());
+                }
+4. 객체에서 선택 / 추출 (String s) -> s.length()
+5. 두 값을 조합  (int a, int b) -> a*b
+6. 두 객체 비교  (Apple a1, Apple a2) -> a1.getWeight().compareTo(a2.getWeight())
+
+3.2 어디에, 어떻게 람다를 사용할까?
+
+! 함수형 인터페이스 : 정확히 하나의 추상 메서드를 지정하는 인터페이스
+    ex) Predicate<T>, Comparator, Runnable
+
+! 디폴트 메서드(인터페이스의 메서드를 구현하지 않은 클래스를 고려해서 
+기본 구현을 제공하는 바디를 포함하는 메서드)를 포함할 수 있다. 많은 디폴트 메서드가 있더라도
+추상 메서드가 오직 하나면 함수형 인터페이스다. *** -> 상속받은것도 있으면 안됨~, 메서드가 0개여도 안됨~~
+
+! 람다 표현식으로 함수형 인터페이스의 추상 메서드 구현을 직접 전달할 수 있으므로 
+전체 표현식을 함수형 인터페이스의 인스턴스로 취급(기술적으로 따지면 함수형 인터페이스를 
+concrete 구현한 클래스의 인스턴스)할 수 있다. -> concrete 클래스는 구상 클래스로 번역됨
+
+   cf. 구상클래스는 추상클래스와 다른 것. 즉 구현안된 추상클래스가 아닌 구현된 클래스라는 것.
+
+
+ex) Runnable r1 = () -> System.out.println("Hello World 1");  -> 람다사용
+    progress(r1);
+
+    process(() -> System.out.println("Hello World 2"));   -> 직접 전달된 람다 표현식으로 바로 출력
+
+
+3.2.2 함수 디스크립터
+! 함수형 인터페이스의 추상 메서드 시그너처는 람다 표현식의 시그너처를 가리킨다
+! 람다 표현식의 시그니처를 서술하는 메서드를 함수 디스크립터라고 부른다.
+
+
+! 람다 표현식은 변수에 할당하거나 함수형 인터페이스를 인수로 받는 메서드로 전달할 수 있으며, 
+  함수형 인터페이스의 추상 메서드와 같은 시그너처를 갖는다
+
+! 함수형 인터페이스를 인수로 받는 메서드에만 람다 표현식을 사용할 수 있다.
+
+
+@FunctionalInterface
+-> 함수형 인터페이스임을 가리키는 어노테이션 
+-> 인터페이스를 선언했지만 실제로 함수형 인터페이스가 아니면 컴파일러 에러~
+
+
+3.3 람다활용 : 실행 어라운드 패턴
+
+! 실제 자원을 처리하는 코드를 설정과 정리 두 과정이 둘러싸는 형태를 갖는다 -> 실행 어라운드 패턴
+
+3.3.1 1단계 : 동작 파라미터화를 기억하라
+3.3.2 2단계 : 함수형 인터페이스를 이용해서 동작 전달
+3.3.3 3단계 : 동작 실행!
+3.3.4 4단계 : 람다 전달
+
+
+3.4 함수형 인터페이스 사용
+
+3.4.1 Predicate
+
+! java.util.function.Predicate<T> 인터페이는 test라는 추상 메서드를 정의하며 
+test는 제네릭 형식 T의 객체를 인수로 받아 불린을 반환한다.
++ and, or 같은 메서드도 있음
+
+3.4.2 Consumer
+
+! java.util.function.Consumer<T> 인터페이스는 제네릭 형식 T객체를 받아서 void를 반환하는 accept 라는 
+추상메서드를 정의한다.
+
+3.4.3 Function
+
+! java.util.function.Function<T,R> 인터페이스는 제네릭 형식 T를 인수로 받아서 제네릭 형식 R객체를 반환하는 apply라는 추상 메서드를 정의한다.
+
+> 기본형 특화 ***
+
+cf. 제네릭 파라미터에는 참조형만 사용할 수 있음 (즉, 객체만 사용할 수 있다는 것 같음, int x Integer o)
+
+cf. 박싱 (참조->기본), 언방식 (기본->참조), 박싱언박싱 자동으로 이뤄지는 오토박싱
+
+cf. 박싱한 값은 기본형르 감싸는 래퍼며 힙에 저장
+    따라서, 박싱한 값은 메모리를 더 소비하며 기본형을 가져올 떄도 메모리를 탐색하는 과정이 필요
+    -> 그래서 자바 8에서 기본형을 입출력으로 사용하는 상황에서 오토박싱 동작을 피할 수 있는 함수형 인터페이스 제공
+
+
+public interface IntPredicate {
+    boolean test(int t);
+}
+
+IntPredicate evenNumbers = (int i) -> i % 2 == 0;   -> 박싱 없음
+evenNumbers.test(1000);
+
+Predicate<Integer> oddNumbers = (Integer i) -> i % 2 == 1;   -> 박싱함
+oddNumbers.test(1000);
+
+
+*** DoublePredicate, IntConsumer, LonBinaryOperator, IntFunction
+Function 인터페이스는 ToIntFunction<T>, IntToDoulbeFunction 등 다양한 출력형식 파라미터 제공
+
+
+함수형 인터페이스는 확인된 예외를 던지는 동작을 허용하지 않는다. 
+즉, 예외를 던지는 람다 표현식을 만들려면 확인된 예외를 선언하는 
+함수형 인터페이스를 직접 정의하거나 람다를 try/catch 블록로 감싸야한다
+
+
+3.5 형식 검사, 형식 추론, 제약
+
+3.5.1 형식 검사
+
+
+! 람다가 사용되는 콘텍스트를 이용해서 람다의 형식을 추론할 수 있다.
+! 어떤 콘텍스트에서 기대되는 람다 표현식의 형식을 대상 형식이라고 부른다.
+
+List<Apple> heavierThan150g =
+    filter(inventory, (Apple a)) -> a.getWeight() > 150);
+
+1. filter 메서드의 선언을 확인한다.
+2. filter 메서드는 두 번째 파라미터로 Predicate<Apple> 형식 (대상 형식)을 기대한다.
+3. Predicate<Apple>은 test라는 한 개의 추상 메서드를 정의하는 함수형 인터페이스다.
+4. test 메서드는 Apple을 받아 boolean을 반환하는 하뭇 디스크립터를 묘사한다.
+5. filter 메서드로 전달된 인수는 이와 같은 요구사항을 만족해야한다.
+
+! 다이아몯느 연산자<>로 콘텍스트에 따른 제네릭 형식을 추론할 수 있다.
+
+! 람다의 바디에 일반 표혀닉이 있으며 void를 반환하는 함수 디스크립터와 호환된다 (물론 파라미터 리스트도 호환되어야 함.)
+
+3.5.3 형식 추론
+
+! 컴파일러는 람다 표현식의 파라미터 형식에 접근할 수 있으므로 람다 문법에서 이를 생략할 수 있다.
+
+(Apple a1, Apple a2) -> .... 형식 추론하지 않음
+(a1, a2) -> .....  형식 추론함
+
+
+3.5.4 지역 변수 사용
+
+! 람다 표현식도 익명 함수처럼 자유 변수를 활용가능, -> 람다 캡처링 
+
+int portNumber = 1337;
+Runnalbe r = () -> System.println(portNumber);
+
+! 람다는 인스턴스 변수와 정적 변수를 자유롭게 캠처할 수 이다. 
+  하지만 그러려면 지역 변수는 명시적으로 final로 선언되어 있어야 하거나 
+  실질적으로 final로 선언된 변수와 똑같이 사용되어야 함.
+
+! 람다표현식은 한 번만 할당할 수 있는 지역 변수를 캡처할 수 있따.
+
+int portNumber = 1337;
+Runnalbe r = () -> System.println(portNumber);
+portNumber = 31337; -> 이게 불가!!! portNumber는 final로 취금됭야함. 
+
+
+
+! 인스턴스 변수는 힙에 저장, 지역 변수는 스택에 위치
+-> 람다에서 지역 변수에 바로 접근할 수 있따는 가정하에 람다가 스레드에서 실행된다면 변수를 할당한
+스레드가 사라져서 변수 할당이 해제되었는데도 람다를 실행하는 스레드에서는 해당 변수에 접근하여할 수 있따.
+-> 따라서, 자바 구녛에서는 원래 변수에 접근을 허용하는 것이 아니라 자유 지역 변수의 복사본을 제공한다.
+-> 복사본은 값이 바뀌지 않아야하므로 지역 변수에는 한 번만 값을 할당해야하는 제약이 생김.
+
+3.6 메서드 레퍼런스
+
+! 메서드 레퍼런스를 이용하면 기존의 메서드 정의를 재활용해서 람다처럼 전달 가능
+
+> 메러드 레퍼런스 만드는 방법
+1. 정적 메서드 레퍼런스
+2. 다양한 형식의 인스턴스 메서드 레퍼런스
+3. 기존 객체의 ㅇㄴ스턴스 메서드 레퍼런스
+
+
+3.6.2 생성자 레퍼런스
+
+3.8 람다 표현식을 조합할 수 있는 유용한 메서드
+3.8.1 Comparator 조합
+> 역정렬, Comparator 연결
+Inventory.sor(comparing(Apple::getWeight).reverse());
+
+inventory.sort(comparing(Apple::getWeight)
+         .reversed()                        -> 역정렬 1정렬기준
+         .thenComparing(Apple::getCountry)); -> 국가별 정렬 2정렬기준
+
+3.8.2 Predicate 조합 > negate, and, or
+3.8.3 Function 조합 > andThen, compose
+
+
+
