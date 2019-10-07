@@ -1,0 +1,382 @@
+[Chapter06. 스트림으로 데이터 수집]
+
+6.1 컬렉터란 무엇인가?
+
+6.1.1 고급 리듀싱 기능을 수행하는 컬렉터
+
+스트림에 collect 를 호출하면 스트림의 요소에 (컬렉터로 파라미터화된) 리듀싱 연산이 수행됨.
+Collectors 유틸리티 클래스는 자주 사용하는 
+
+6.1.2 미리 정의된 컬렉터
+-> groupingBy 같이 Collectors 클레스에서 제공하는 팩토리 메서드의 기능
+
+# Collectors 에서 제공하는 메서드의 기능
+!스트림 요소를 하나의 값으로 리듀스하고 요약
+!요소 그룹화
+!요소 분할
+
+
+6.2 리듀싱과 요약
+
+6.2.1 스트림값에서 최댓값과 최솟값 검색
+
+Comparator<Dish> dishCaloriesComparator = 
+    Comparator.comparingInt(Dish::getCalories);
+
+Comparator<Dish> mostCaloriesDish = 
+    menu.stream()
+        .collect(maxBy(dishCaloriesComparator));
+
+스트림에 있는 객체의 숫자필드의 합계나 평균 등을 반환하는 연산에도 리듀싱 기능이 자주 사용된다.
+-> 요약연산
+
+6.2.2 요약연산
+Collectors.summingInt
+
+int totalCalories = menu.stream().collect(summingInt(Dish::getCalories));
+
+Collectors.averagingInt -> 숫자 집합의 평균 계산
+
+double avgCaloreis = 
+    menu.stream().collect(averagingInt(Dish::getCalories));
+
+--> 지금까지 최대 최소 합계 평균 등을 봄, 이 중 두개이상 사용 가능
+    이떄는 팩토리 메서드 summarizingInt 가 반환하는 컬렉터 사용가능
+
+    IntSummaryStatistics menuStatistics =
+        menu.stream().collect(summariizngInt(Dish::getCalories));
+
+
+6.2.3 문자열 연결
+joining
+-> String shortMenu = menu.steram().map(Dish::getName).collect(joining(","));
+
+6.2.4 범용 리듀싱 요약 연산
+지금까지 살펴본 모든 컬렉턴ㄴ reducing 팩토리 메서드로 정의가능
+
+totalCalories = menu.stream()collect(reducing(0, Dish::getCalories, (i, j) -> i + j));
+
+reducing 은 세가지 인수를 받는다 
+! 리듀싱 연산의 시작값이거나 스트림에 인수가 없을 떄 반환값값이다. (숫자합계에서는 인수가 없을 때 반환값으로 0이 적합하다.)
+! 요리를 칼로리 정수로 변환할 떄 사용한 변환함수
+! 같은 종류의 두 항목을 하나이 값으로 더하는 BinaryOperator다. 예제에서는 두개의 int가 사용됨
+
+Optional<Dish> mostCaloriesDish = 
+    menu.stream().collect(reducing(
+        (d1, d2)-> d1.getCalories() > d2.getCalories() ? d1 : d2));
+
+한개의 인수를 갖는 reducing 팩토리 메서드는 세 개의 인수를 갖는 reducing 메서드에서 
+스트림의 첫 번째 요소를 시작 요소, 즉 첫 번째 인수로 받으며, 자신을 그대로 반환하는 항등함수를 두번째 인수로 
+받는 상황에 해당.
+
+즉, 한 개의 인수를 갖는 reducing 컬렉터는 시작값이 없으므로 빈 스틀미이 넘겨졌을 때 시작값이 설정되지 않는 상황이 벌어짐.
+결국 한 갠의 인수를 갖는 reducing은 Optional<Dish> 객체를 반환함.
+
+
+!컬렉션 프레임워크 유연성 : 같은 연산도 다양한 방식으로 수행
+int totalCalories = menu.stream().collect(reducing(0,  <- 초깃값
+                            Dish::getCalories, <- 변환함수
+                            Integet::sum)); <- 합계함수
+
+
+int totalCalories = menu.stream().map(Dish::getCalories).reduce(Integer::sum).get();
+
+=>
+
+int totalCalories = menu.stream().mapToInt(Dish::getCalories).sum();
+
+가동석과 성능이라는 두마리 토끼
+! 가장 마지막에 확인한 해결 방법이 가독성이 가장 좋고 간결.
+! IntStream 덕분에 자동 언박싱 연산을 수행하거나 Integer를 int로 변환하는 과정을 피할 수 있으므로 성능까지 좋다.
+
+-> 컬렉터는 코드가 좀 더 복잡한 대신 재사용성과 커스터마이즈 가능성을 제공하는 
+높은 수준의 추상화와 일반화를 얻을 수 있다.
+
+6.3 그룹화
+
+Map<Dish.Type, List<Dish>> dishesByType = menu.stream().collect(groupingBy(Dish::getType));
+
+Dish.Type과 일치하는 모든 요리를 추출하는 함수를 groupingBy 메서드로 전달
+이 함수를 기준으로 스트림이 그룹화되므로 분류함수라고 부름
+
+그룹화 연산의 결과로 그룹화 함수가 반환하는 키 그리고 각 키에 대응하는 스트림의 모든 항목 리스트를 값으로 갖는 
+맴이 반환됨. 메뉴 그룹화 예제에서 키는 요리 종류고, 값은 해당 종류에 포함되는 모든 요리다.
+
+단순한 속성 접근자 대신 더 복잡한 분류 기준이 필요한 상황에서는 메서드 레퍼런스를 분류함수로 사용할 수 없음.
+이럴때 메서드 레퍼런스 대신 람다 표현식으로 필요한 로직을 구현
+ 
+ex)
+
+public enu CaloricLevel { DIET, NORMAL, FAT}
+
+Map<CaloricLevel, List<Dish>> dishesByCaloricLevel = menu, stream().collect(
+    groupingBy(dish -> {
+        if (dish.getCalories() <= 400) {
+            return CaloricLevel.DIET;
+        } else if (dsih.getCalories() <= 700) {
+            return CaloricLEvel.NORMAL;
+        } else {
+            return CaloricLevel.FAT;
+        }
+    }));
+
+
+6.3.1 다수준 그룹화
+두 인수를 받는 팩토리 메서드 Collectors.groupingBy 를 이용해서 항목을 다수준으로 그룹화 할 수 있음.
+
+Collectors.groupingBy는 일반적인 분류 함수와 컬렉터를 인수로 받는다.
+즉, 바깥쪽 groupingBy 메서드에 스트림의 항목을 분류할 두 번째 기준을 정의하는 내부 groupingBy 를 전달해서 
+두 수준으로 스트림의 항목을 그룹화할 수 있음.
+
+ex)
+
+Map<Dish.Type, Map<CaloricLevel, List<Dish>>> dishesByTypeCaloricLevel = 
+menu.stream().collect(
+    groupingBy(Dish::getType, -> 그룹 
+        groupingBy(dish -> { -> 또 그룹
+            if (dish.getCalories() <= 400) {
+                return CaloricLevel.DIET;
+            } else if (dish.getCalories() <= 700) {
+                return CaloricLevel.NORMAL;
+            } else {
+                return CaloricLevel.FAT;
+            }
+        })
+    )
+);
+
+groupingBy의 연산을 버킷 개념으로 생각하기
+
+6.3.2 서브그룹으로 데이터 수집
+
+groupingBy(f)는 groupingBy(f, toList())의 축약형
+
+
+팩토리 메서드로 컬레터가 반환한 결과를 다른 형식으로 활용할 수 있다.
+
+리듀싱 컬렉터는 절대 Optional.empty()를 반환하지 않는다.
+
+6.4 분할
+분할 함수 -> 프레디케이트를 분류함수로 사용하는 특수한 그룹화 기능
+맵의 키 형식은 Boolean
+
+6.4.1 분할의 장점
+
+!분할 함수가 반환하는 참, 거짓 두 가지 요소의 슽림 리스트를 모두 유지한다는 것이 분할의 장점
+
+
+!분할이란 특수한 종류의 그룹화
+groupingBy와 partitioningBy 컬렉터와 비슷한 점이 있음. 
+
+partitioningBy 는 불린을 반환하는 함수, 즉 프레디케이트를 요구하므로 컴파일되지 않는 코드다.
+Dish::getType은 프레디케이트로 사용할 수 없는 메서드 레퍼런스다.
+
+6.4.2 숫자를 소수와 비소수로 분할하기
+
+6.5 Collector 인터페이
+!Collector 인터페이스는 리듀싱 연산을 어떻게 구현할지 제공하는 메서드 집합으로 구성됨.
+
+
+pubilc interface Clooector<T, A, R> {
+    Supplier<A> supplier();
+    BiConsumer<A, T> accumulator();
+    Function<A, R> finisher();
+    BinaryOperator<A> combiner();
+    Set<Characteristics> characteristics();
+}
+
+1. T는 수집될 스트림 항목의 제네릭 형식이다
+2. A는 누적자, 즉 수집과정에서 중간 결과를 누적하는 객체의 형식이다.
+3. R은 수집 연산 결과 객체의 형식(항상 그런것은 아니지만 대개 컬렉션 형식)이다.
+
+!누적과정에서 사용되는 객체가 수집과정의 최종결과로 사용됨.
+
+
+6.5.1 Collector 인터페이스의 메서드 살펴보기
+
+supplier 메서드 : 새로운 결과 컨테이너 만들기
+accumulator 메서드 : 결과 컨테인에 요소 추가하기
+finisher 메서드 : 최종 변환값을 결과 컨테이너로 적용하기
+combiner 메서드 : 두 결과 컨테이너 병합
+
+#Characteristics 메서드 
+- UNORDERED
+- CONCURRENT
+- IDENTITY_FINISH
+
+
+6.6 커스텀 컬렉터를 구현해서 성능 개선하기
+
+6.6.1 소수로만 나누기
+
+1단계 : Collector 클래스 시그너처 정의
+
+public class PrimeNumbersCollector
+            implements Collector <Integer,
+                                Map<Boolean, List<Ingeter>>,
+                                Map<Boolean, List<Integer>>>
+                                스트림 요소의 형식, 누적자형식, 수진연산의 결과 형식 순으로...
+
+
+2단계 : 리듀싱 연산 구현
+
+다섯 메서드 구현
+
+public Supplier <Map<Boolena, List<Integer>>> supplier() {
+    return () -> new HashMap<Boolean, List<Integer>>() {{
+        put(true, new ArrayList<Integer>());
+        put(false, new ArrayList<Integer>());
+    }};
+}
+
+public BiConsumer<Map<Boolean, List<Integer>>, Integer> accumulator() {
+    return (Map<Boolean, List<Integer>> acc, Integer candidate) -> {
+        acc.get (isPrime(acc.get(true), candidate))
+            .add(candidate)
+    };
+}
+
+
+3단계 : 병렬 실행할 수 있는 컬렉터 만들기(가능하다면)
+병렬 수집과정에서 두 부분 누적자를 합칠 수 있는 메서드를 만든다
+-> 두번째 맵의 소수 리스트롸 비소수 리스트의 모든 수를 첫번째 맵에 추가하는 연산
+
+public BinaryOperator<Map<Boolean, List<Integer>>> combiner() {
+    return (Map<Boolean, List<Integer>> map1,
+            Map<Boolean, List<Integer>> map2) -> {
+                map1.get(true).addAll(map2.get(true));
+                map2.get(false).addAll(map2.get(false));
+                return map1;
+    };
+}
+
+
+
+알고리즘 자체가 순차적이어서 컬렉터를 실제 병렬로 사용할 수 없다. 따라서 combiner메서드는 호출될 일이 없으므로
+빈 구현으로 남겨둘 수 있다.
+(또는 UnsupprotedOperation Exception을 던지도록 구현하는 방법도 좋다)
+
+
+4단계 : finisher 메서드와 컬렉터의 characteristics 메서드
+accumulator의 형식은 컬렉터 결과 형식과 같으므로 
+변환 과정이 필요없다
+따라서 항등함수 identity를 반환하도록 finisher 메서드를 구현한다.
+
+public Function<Map<Boolean, List<Integer>>,
+                Map<Boolean, List<Integer>>> finisher() {
+    return Function.identity();
+}
+
+
+public Set<Characteristics> characteristics() {
+    return Collections.unmodifiableSet(EnumSet.of(IDENTITY_FINISH));
+}
+
+[Chapter07. 병렬 데이터 처리와 성능]
+
+
+7.1 병렬 스트림
+
+parallelStream 을 호출하면 병렬 스트림이 생성된다.
+병렬 스틀미이란 각각의 스레드에서 처리할 수 있도록 스트림 요소를 여러 청크로 분할한 스트림이다.
+따라서, 병렬 스트림을 이용하면 모든 멀티코어 프로세서가
+각각의 청크를 처리하도록 할당할 수 있다.
+
+
+7.1.1 순차 스트림을 병렬 스트림으로 변환하기
+순차 스트림에 parallel 메서드를 호출하면 기존의 함수형 리듀싱 연산 (숫자 합계 계산)이 병렬로 처리된다.
+
+마지막으로 리듀싱 연산으로 생성된 부분결과를 다시 리듀싱 연산으로 합쳐서 전체 스트림의 리듀싱 결과를 도출한다.
+
+!사실 순차 스트림에 parallel 을 호출해도 스트림 자체에는 아무 변화도 일어나지 않는다. 
+내부적으로 parallel을 호출하면 이후 연산이 병렬로 수행해야 함을 의미하는 불린 플래그가 설정된다. 
+반대로 sequential로 병렬 스트림을 순차 스트림으로 바꿀수 있다.
+
+이 두 메서드를 이용해서 어떤 연산을 병렬로 실행하고 어떤 연산을 순차로 실행할지 제어할 수 있다.
+
+반복형, 순차 리듀싱, 병렬 리듀싱 중 빠른건 무엇일까??
+
+7.1.2 스트림 성능 측정
+병렬화를 이용하면 순차나 반복 혀식에 비해 성능이 더 좋아질 것이라 추측
+-> 이건 위험한 생각
+특히 성능을 최적할때는 세가지 황금규칙을 기억해야한다. 측정,측정,측정
+
+
+
+병렬이 느린 이유
+! iterate가 박싱된 객체를 생성하므로 이를 다시 언박싱하는 과정이 필요했다.
+! iterate는 병렬로 실행될 수 있도록 독립적인 청크로 분할하기 어렵다.
+
+더 특화된 메서드 사용
+
+!LongStream.rangeClosed는 long 을 직접 사용하므로 박싱과 언박싱 오버헤드가 사라짐.
+!LongStream.rangeClosed는 쉽게 청크로 분할할 수 있는 숫자 범위를 생산.
+
+
+특화되지 않은 스트림을 처리할 때는 오토박싱, 언박싱 등의 오버헤드를 수반하기 때문.
+
+
+병렬화를 이용하려면 스트림을 재귀적으로 분할해야하고, 각 서브스트림을 서로 다른 스레드의 리듀싱 연산으로 할당하고,
+이들 결과를 하나의 값으로 합쳐야한다.
+
+
+
+7.1.3 병렬 스트림의 올바른 사용법
+
+병렬 스트림을 이용하면 우리가 예상한 값이 안나올 수 있음
+따라서 상태 공유에 따른 부작용을 피해야함.
+
+7.1.4 병렬 스트림 효과적으로 사용하기
+
+!측정하기
+!박싱주의
+!순차스트림보다 병렬 스트림에서 성능이 떨어지는 연산이 있음
+!스트림에서 수행하는 전체 파이프라인 연산 비용을 고려하라
+!소량의 데이터에서는 병렬 스트림이 도움되지 않는다
+!스트림을 구성하는 자료구조가 적절한지 확인하라.
+! 스트림의 특성과 파이프라인의 중간 연산이 스트림의 특성을 어ㄸ허게 바꾸는지 따라 분해 과정의 성능이 달라질 수 있다.
+!최종연산의 병합과정 비용을 살펴보라.
+
++ 내부 인프라구조 살피기!
+
+
+
+7.2 포크/조인 프레임워크
+
+7.2.1 RecursiveTask 활용
+
+일반적으로 애플리케이션에서는 둘 이상의 ForkJoinPool을 사용하지 않는다. 즉, 소프트웨어의 필요한 곳에서 언제든 가져다 쓸수 있도록
+ForkJoinPool을 한번만 인스턴스화해서 정적 필드에 싱글턴으로 저장한다.
+
+ForkJoinPool을 만들며서 인수가 없는 디폴트 생성자를 이용했는데, 이는 JVM에서 이용할 수 있는 모든 프로세서가 자유롭게 풀에 접근할 수 있음을 의미.
+더 정확하게는 Runtime.availableProcessors의 반환값으로 풀에 사용할 스레드 수를 결정한다.
+availableProcessors, 즉 사용할 수 있는 프로세서라는 이름과는 달리 실제 프로세서 외에 하이퍼스레딩과 관련된 가상 프로세서도 개수에 포함된다.
+
+
+7.3 Spliterator
+분할할 수 잇는 반복자
+
+Iterator처럼 Spliterator는 소스의 요소 탐색 기능을 제공한다는 점은 같지만 Spliterator는 병렬 작업에 특화되어 있다.
+
+자바 8은 컬렉션 프레임워크에 포함된 모든 자료구조에 사용할 수 있는 디폴트 spliterator 인터페이스를 구현한다.
+
+7.3.1 분할과정
+스트림을 여러 스트림으로 분할하는 과정은 재귀적으로 일어난다.
+1단계에서 첫 번째 Spliterator에 trySplit을 호출하면 두 번째 Spliterator가 생성됨
+2단계에서 두 개의 Spliterator에 trySplit를 다시 호출하면 네 개의 Spliterator가 생성됨.
+이처럼 trySplit의 결과가 null이 될 떄까지 이 과정을 반복
+-> 더 이상 자료구조를 분할할 수 없음을 의미할때까지, 그러면 재귀 분할 과정 종료
+
+Spliterator 특성
+Spliterator는 characteristics라는 추상 메서드도 정의함.
+Characteristics메서드는 Spliterator 자체의 특성 직합을 포함하는 int를 반환한다.
+
+#Spliterator
+1. ORDERED
+2. DINSTINCT
+3. SORTED
+4. SIZED
+5. NONNULL
+6. IMMUTABLE
+7. CONCURRENT
+8. SUBSIZED
