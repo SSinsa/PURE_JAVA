@@ -1,0 +1,73 @@
+[Chapter 10. null 대신 Optional]
+
+---------null--------------
+
+1. null 안전시도 1 : 깊은 의심
+nullPointException 을 피하기 위해서는 확인 코드를 삽입해야한다
+그러다보면, 중첩된 if가 추가되면서 코드 들여쓰기 수준이 증가한다
+-> 반복 패턴 = 깊은 의심 (deep doubt)
+==> 코드의 구조가 엉망이 되고 가독성도 떨어짐
+
+2. null 안전시도 2 : 너무 많은 출구
+if{
+}
+if{
+}
+...
+
+-> 유지보수가 어려움, null체크를 빼먹을 수 있음
+
+# null
+- 에러의 근원이다
+- 코드를 어지럽힌다
+- 아무 의미가 없다
+- 자바 철학에 위배된다
+- 형식 시스템에 구멍을 만든다
+
+# 다른 언어에서의 null
+- 그루비 -> 안전 내비게이션 연산자
+    ex) def carInsuranceName = person?.car?.insurance?.name
+- 하스켈 : 선택형값을 저장할 수 있는 Maybe(주어진 형식의 값을 갖거나 아니면 아무 값도 갖지 않을 수 있따)
+- 스칼라 : T 형식의 값을 갖거나 아무 값도 갖지 않을 수 있는 Option[T]라는 구조 ( 값이 있는지 여부를 명시적을 확인해야함)
+-> 자바8 : java.util.Optional<T>
+
+
+---------Optional--------------
+
+Optional은 선택형값을 캡슐화하는 클래스
+값이 있으면 Optional 클래스는 값을 감싼다
+값이 없으면 Optional.empty 메서드로 Optional 을 반환한다
+Optional.empty는 Optional의 특별한 싱글턴 인스턴스를 반환하는 정적 팩토리 메서드
+
+# null vs Optional.empty()
+- null : NullPointException
+- Optional.empty() : Optional객체이므로 다양한 방식으로 활용할 수 있다
+
+ex) private Car car => private Optional<Car> car
+
+# Optional 적용 패턴
+1. Optional 객체 만들기
+- 빈 Optional : Optional.empty로 빈 Optioncal 객체를 얻을 수 있다
+    Optional<Car> optCar = Optional.empty();
+2. null이 아닌 값으로 Optional 만들기
+    Optional<Car> optCar = Optional.of(car);
+3. null값으로 Optional 만들기
+- 정적 팩토리 메서드
+    Optional<Car> optCar = Optional.ofNullable(car);
+
+-> null 가져올때는 get 메서드 사용
+그러나 잘못사용하면 null 과 같은 에러 
+
+
+# map으로 Optional 값을 추출하고 변환하기 
+
+ex)
+Optional<Insurance> optInsurance = Optional.ofNullable(insurance);
+Optional<String> name = optInsurance.map(Insurance::getName);
+
+# flapMap으로 Optional 객체 연결
+flatMap -> 함수를 인수로 받아서 다른 스트림을 반환하는 메서드
+        -> 인수로 받은 함수를 적용해서 생성된 각각의 스트림에서 콘텐츠만 남긴다. 즉 함수를 적용해서 생성된 모든 
+        스트림이 하나의 스트림으로 병합되어 평준화된다
+(Optional을 객체 Optional로 만듬)
+
